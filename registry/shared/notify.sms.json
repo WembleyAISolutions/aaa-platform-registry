@@ -1,0 +1,35 @@
+{
+  "id": "shared.notify.sms",
+  "version": "1.0.0",
+  "description": "Send an SMS notification to a customer phone number.",
+  "input_schema": {
+    "type": "object",
+    "required": ["to", "message"],
+    "additionalProperties": false,
+    "properties": {
+      "to": { "type": "string", "minLength": 8, "maxLength": 32 },
+      "message": { "type": "string", "minLength": 1, "maxLength": 1000 }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["provider", "message_id", "status"],
+    "additionalProperties": false,
+    "properties": {
+      "provider": { "type": "string" },
+      "message_id": { "type": "string" },
+      "status": { "type": "string" }
+    }
+  },
+  "execution": {
+    "mode": "sync",
+    "timeout_ms": 15000,
+    "retry": { "max_attempts": 3, "strategy": "exponential", "base_delay_ms": 500 },
+    "idempotency": { "required": true, "key_fields": ["to", "message"] }
+  },
+  "billing": { "event": "on_success", "unit_cost": 0.02, "currency": "USD", "granularity": "per_call" },
+  "audit": { "required": true, "retention_days": 365, "redaction": "partial" },
+  "policy": { "region": "AU", "data_classification": "pii", "scopes": ["notify:send"] },
+  "errors": { "categories": ["VALIDATION_ERROR", "PERMISSION_DENIED", "EXECUTION_TIMEOUT", "UPSTREAM_FAILURE", "INTERNAL_ERROR"] },
+  "deprecation": { "deprecated": false }
+}
