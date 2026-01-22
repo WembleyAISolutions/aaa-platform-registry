@@ -1,0 +1,58 @@
+name: Validate AAA Platform Registry
+
+on:
+  pull_request:
+    paths:
+      - "registry/**/*.json"
+      - ".github/workflows/validate-registry.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "registry/**/*.json"
+      - ".github/workflows/validate-registry.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout registry repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install JSON Schema validator (ajv)
+        run: |
+          npm install -g ajv-cli@5
+
+      - name: Fetch AAA Core Skill Schema
+        env:
+          CORE_SCHEMA_URL: https://raw.githubusercontent.com/WembleyAISolutions/aaa-platform-core/main/schemas/skill.schema.json
+        run: |
+          mkdir -p .schemas
+          curl -sSL "$CORE_SCHEMA_URL" -o .schemas/skill.schema.json
+          test -s .schemas/skill.schema.json
+
+      - name: Validate registry manifests
+        run: |
+          set -e
+          echo "Validating registry manifests..."
+          FILES=$(find registry -type f -name "*.json" | sort)
+
+          if [ -z "$FILES" ]; then
+            echo "No registry manifests found. Skipping validation."
+            exit 0
+          fi
+
+          for file in $FILES; do
+            echo "→ Validating $file"
+            ajv validate \
+              -s .schemas/skill.schema.json \
+              -d "$file" \
+              --strict=false
+          done
+
+          echo "✅ All registry manifests are valid."
